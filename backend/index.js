@@ -17,7 +17,7 @@ app.use(express.json());
 
 const GITHUB_API = "https://api.github.com";
 
-// 🔹 Helper: parse repo URL safely
+//  Helper: parse repo URL safely
 function parseRepoUrl(repoUrl) {
   try {
     const url = new URL(repoUrl);
@@ -34,7 +34,7 @@ function parseRepoUrl(repoUrl) {
   }
 }
 
-// 🔹 Helper: fetch JSON with error handling
+//  Helper: fetch JSON with error handling
 async function fetchGitHub(url) {
   const res = await fetch(url, {
     headers: {
@@ -57,7 +57,7 @@ app.post("/api/files", async (req, res) => {
   try {
     const { repoUrl, filter = "" } = req.body;
 
-    // 🔴 Validation
+    //  Validation
     if (!repoUrl) {
       return res.status(400).json({ error: "Repository URL is required" });
     }
@@ -70,12 +70,12 @@ app.post("/api/files", async (req, res) => {
 
     const { owner, repo } = parsed;
 
-    // 🔹 Get repo info (default branch)
+    //  Get repo info (default branch)
     const repoData = await fetchGitHub(`${GITHUB_API}/repos/${owner}/${repo}`);
 
     const branch = repoData.default_branch;
 
-    // 🔹 Get full tree
+    //  Get full tree
     const treeData = await fetchGitHub(
       `${GITHUB_API}/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`,
     );
@@ -84,7 +84,7 @@ app.post("/api/files", async (req, res) => {
       return res.status(500).json({ error: "Failed to read repository tree" });
     }
 
-    // 🔹 Transform files
+    //  Transform files
     let files = treeData.tree
       .filter((item) => item.type === "blob")
       .map((file) => {
@@ -100,7 +100,7 @@ app.post("/api/files", async (req, res) => {
         };
       });
 
-    // 🔹 Optional filtering (backend level)
+    //  Optional filtering (backend level)
     if (filter) {
       const f = filter.toLowerCase();
       files = files.filter(

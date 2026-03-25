@@ -11,7 +11,6 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // 🔹 Fetch files from backend
   const handleFetch = async () => {
     try {
       setLoading(true);
@@ -48,7 +47,6 @@ function App() {
     }
   };
 
-  // 🔹 Copy link
   const handleCopy = () => {
     if (!files || files.length === 0) return;
 
@@ -64,7 +62,7 @@ function App() {
     <div className="appContainer">
       <h1 className="title">GitHub Raw File Extractor</h1>
 
-      {/* 🔹 Input Section */}
+      {/*  Input Section */}
       <div className="searchBoxes">
         <input
           type="text"
@@ -85,10 +83,13 @@ function App() {
         </button>
       </div>
 
-      {/* 🔹 Error */}
+      {/*  Error */}
       {error && <p className="errorMessage">⚠ {error}</p>}
 
-      {/* 🔹 Repo Info */}
+      {/* Loader */}
+      {loading && <div className="loader"></div>}
+
+      {/*  Repo Info */}
       {repoInfo && (
         <div className="repoInfo">
           <p>
@@ -103,7 +104,7 @@ function App() {
         </div>
       )}
 
-      {/* 🔹 File List */}
+      {/*  File List */}
       <ul className="fileList">
         {files && files.length > 0 && (
           <button className="primButton" onClick={handleCopy}>
