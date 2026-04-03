@@ -1,7 +1,9 @@
 const dotenv = require("dotenv");
 const express = require("express");
 const cors = require("cors");
+
 dotenv.config();
+
 const PORT = Number(process.env.PORT);
 const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL;
 
@@ -13,11 +15,12 @@ app.use(
     methods: ["POST"],
   }),
 );
+
 app.use(express.json());
 
 const GITHUB_API = "https://api.github.com";
 
-//  Helper: parse repo URL safely
+//  Helper: parse repo URL + detect commit SHA
 function parseRepoUrl(repoUrl) {
   try {
     const url = new URL(repoUrl);
@@ -25,10 +28,17 @@ function parseRepoUrl(repoUrl) {
 
     if (parts.length < 2) return null;
 
-    return {
-      owner: parts[0],
-      repo: parts[1],
-    };
+    const owner = parts[0];
+    const repo = parts[1];
+
+    let ref = null;
+
+    // Handle commit-specific URL: /owner/repo/tree/<sha>
+    if (parts[2] === "tree" && parts[3]) {
+      ref = parts[3];
+    }
+
+    return { owner, repo, ref };
   } catch {
     return null;
   }
@@ -39,7 +49,6 @@ async function fetchGitHub(url) {
   const res = await fetch(url, {
     headers: {
       Accept: "application/vnd.github+json",
-      // Optional: add token to avoid rate limit
       ...(process.env.GITHUB_TOKEN && {
         Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
       }),
@@ -57,7 +66,6 @@ app.post("/api/files", async (req, res) => {
   try {
     const { repoUrl, filter = "" } = req.body;
 
-    //  Validation
     if (!repoUrl) {
       return res.status(400).json({ error: "Repository URL is required" });
     }
@@ -68,23 +76,34 @@ app.post("/api/files", async (req, res) => {
       return res.status(400).json({ error: "Invalid GitHub URL" });
     }
 
-    const { owner, repo } = parsed;
+    const { owner, repo, ref: inputRef } = parsed;
 
-    //  Get repo info (default branch)
-    const repoData = await fetchGitHub(`${GITHUB_API}/repos/${owner}/${repo}`);
+    let ref = inputRef;
 
-    const branch = repoData.default_branch;
+    //  If no commit SHA → fetch latest commit from default branch
+    if (!ref) {
+      const repoData = await fetchGitHub(
+        `${GITHUB_API}/repos/${owner}/${repo}`,
+      );
 
-    //  Get full tree
+      const branch = repoData.default_branch;
+
+      const commitData = await fetchGitHub(
+        `${GITHUB_API}/repos/${owner}/${repo}/commits/${branch}`,
+      );
+
+      ref = commitData.sha;
+    }
+
+    //  Fetch full repo tree using ref (commit SHA)
     const treeData = await fetchGitHub(
-      `${GITHUB_API}/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`,
+      `${GITHUB_API}/repos/${owner}/${repo}/git/trees/${ref}?recursive=1`,
     );
 
     if (!treeData.tree) {
       return res.status(500).json({ error: "Failed to read repository tree" });
     }
 
-    //  Transform files
     let files = treeData.tree
       .filter((item) => item.type === "blob")
       .map((file) => {
@@ -96,11 +115,11 @@ app.post("/api/files", async (req, res) => {
           path: file.path,
           type,
           size: file.size || 0,
-          fileLink: `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${file.path}`,
+          fileLink: `https://raw.githubusercontent.com/${owner}/${repo}/${ref}/${file.path}`,
         };
       });
 
-    //  Optional filtering (backend level)
+    //  Filtering
     if (filter) {
       const f = filter.toLowerCase();
       files = files.filter(
@@ -112,7 +131,7 @@ app.post("/api/files", async (req, res) => {
 
     return res.json({
       repo: `${owner}/${repo}`,
-      branch,
+      ref,
       total: files.length,
       files,
     });

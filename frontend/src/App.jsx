@@ -37,7 +37,7 @@ function App() {
       setFiles(data.files || []);
       setRepoInfo({
         repo: data.repo,
-        branch: data.branch,
+        ref: data.ref,
         total: data.total,
       });
     } catch (err) {
@@ -62,11 +62,11 @@ function App() {
     <div className="appContainer">
       <h1 className="title">GitHub Raw File Extractor</h1>
 
-      {/*  Input Section */}
+      {/* Input Section */}
       <div className="searchBoxes">
         <input
           type="text"
-          placeholder="Paste GitHub public repository URL"
+          placeholder="Paste GitHub repo or commit URL"
           value={repoUrl}
           onChange={(e) => setRepoUrl(e.target.value)}
         />
@@ -83,20 +83,20 @@ function App() {
         </button>
       </div>
 
-      {/*  Error */}
+      {/* Error */}
       {error && <p className="errorMessage">⚠ {error}</p>}
 
       {/* Loader */}
       {loading && <div className="loader"></div>}
 
-      {/*  Repo Info */}
+      {/* Repo Info */}
       {repoInfo && (
         <div className="repoInfo">
           <p>
             <strong>Repository:</strong> {repoInfo.repo}
           </p>
           <p>
-            <strong>Branch:</strong> {repoInfo.branch}
+            <strong>Ref (Commit SHA):</strong> {repoInfo.ref}
           </p>
           <p>
             <strong>Total Files:</strong> {repoInfo.total}
@@ -104,13 +104,14 @@ function App() {
         </div>
       )}
 
-      {/*  File List */}
+      {/* File List */}
       <ul className="fileList">
         {files && files.length > 0 && (
           <button className="primButton" onClick={handleCopy}>
             Copy
           </button>
         )}
+
         {files.map((file, index) => (
           <li key={index} className="singleFile">
             <p>{file.path}:</p>
